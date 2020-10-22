@@ -14,31 +14,31 @@ def init_weight(m, n):
     for i in range(m):
         w[i] = [0.0] * n
         for j in range(n):
-            w[i][j] = rand(-1, 1)
+            w[i][j] = rand(-1, 1)/m
     return w
 
 
 def init_bias(m):
     b = [0.0] * m
     for i in range(m):
-        b[i] = rand(-1, 1)
+        b[i] = rand(-0.2, 0.2)
     return b
 
+#
+# # tanh激活函数
+# def tanh(x):
+#     return np.tanh(x)
+#
+#
+# # tanh函数的梯度函数
+# def tanh_derivative(x):
+#     return 1 - np.tanh(x) * np.tanh(x)
 
-# tanh激活函数
-def tanh(x):
-    return np.tanh(x)
 
-
-# tanh函数的梯度函数
-def tanh_derivative(x):
-    return 1 - np.tanh(x) * np.tanh(x)
-
-
-def active_function(x, deriv=False):
-    if deriv:
-        return 1 - np.tanh(x) * np.tanh(x)  # tanh 函数的导数
-    return np.tanh(x)
+# def active_function(x, deriv=False):
+#     if deriv:
+#         return 1 - np.tanh(x) * np.tanh(x)  # tanh 函数的导数
+#     return np.tanh(x)
 
 
 def get_loss(expect, output_cell):
@@ -115,7 +115,7 @@ class BPNetwork:
             total = 0.0
             for i in range(self.input_n):
                 total += self.input_cells[i] * self.input_w[i][h]
-            self.hidden_res[0][h] = active_function(total + self.hidden_bs[0][h])
+            self.hidden_res[0][h] = total + self.hidden_bs[0][h]
 
         # 隐藏层
         hidden_layers = len(self.hidden_ns)
@@ -125,14 +125,14 @@ class BPNetwork:
                 total = 0.0
                 for i in range(self.hidden_ns[k]):
                     total += self.hidden_res[k][i] * self.hidden_ws[k][i][h]
-                self.hidden_res[k + 1][h] = active_function(total + self.hidden_bs[k + 1][h])
+                self.hidden_res[k + 1][h] = total + self.hidden_bs[k + 1][h]
 
         # 输出层
         for h in range(self.output_m):
             total = 0.0
             for i in range(self.hidden_ns[hidden_layers - 1]):
                 total += self.hidden_res[hidden_layers - 1][i] * self.output_w[i][h]
-            self.output_cells[h] = active_function(total + self.output_b[h])
+            self.output_cells[h] = total + self.output_b[h]
 
         return self.output_cells
 
@@ -141,7 +141,7 @@ class BPNetwork:
         self.output_deltas = [0.0] * self.output_m
         for o in range(self.output_m):
             error = expect[o] - self.output_cells[o]
-            self.output_deltas[o] = active_function(self.output_cells[o], True) * error
+            self.output_deltas[o] = 1 * error
 
         # 隐藏层 deltas
         hidden_layers = len(self.hidden_ns)
@@ -155,7 +155,7 @@ class BPNetwork:
                 error = 0.0
                 for i in range(len(tmp_deltas)):
                     error += tmp_deltas[i] * tmp_w[o][i]
-                self.hidden_deltases[k][o] = active_function(self.hidden_res[k][o], True) * error
+                self.hidden_deltases[k][o] = 1 * error
             k = k - 1           # k -= 1
             if k >= 0:
                 tmp_deltas = self.hidden_deltases[k + 1]
@@ -179,8 +179,8 @@ class BPNetwork:
 
         # 更新输出层到第一个隐藏层之间的 weight
         for i in range(self.input_n):
-            for o in range(self.hidden_ns[k]):
-                change = self.hidden_deltases[k][o] * self.input_cells[i]
+            for o in range(self.hidden_ns[0]):
+                change = self.hidden_deltases[0][o] * self.input_cells[i]
                 self.input_w[i][o] += change * learn
 
     def update_b(self, learn):
@@ -188,12 +188,12 @@ class BPNetwork:
         k = len(self.hidden_ns) - 1
         while k >= 0:
             for i in range(self.hidden_ns[k]):
-                self.hidden_bs[k][i] = self.hidden_bs[k][i] + learn * self.hidden_deltases[k][i]
+                self.hidden_bs[k][i] = self.hidden_bs[k][i] + learn * self.hidden_deltases[k][i] * 1
             k = k - 1
 
         # 更新输出层的bias
         for i in range(self.output_m):
-            self.output_b[i] = self.output_b[i] + learn * self.output_deltas[i]
+            self.output_b[i] = self.output_b[i] + learn * self.output_deltas[i] * 1
 
     # 计算output的平均损失值
     def get_average_loss(self, datas, expects):
