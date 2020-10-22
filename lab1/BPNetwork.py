@@ -106,6 +106,7 @@ class BPNetwork:
 
     # 向前传播，对每一层求值
     def forward_propagate(self, input_val):
+        # print(input_val)
         # 根据 input 初始化输入层的输入数据
         self.input_cells = input_val.copy()
 
@@ -134,7 +135,7 @@ class BPNetwork:
                 total += self.hidden_res[hidden_layers - 1][i] * self.output_w[i][h]
             self.output_cells[h] = total + self.output_b[h]
 
-        return self.output_cells
+        return self.output_cells[:]
 
     def calculate_delta(self, expect):
         # 输出层 delta
@@ -200,7 +201,7 @@ class BPNetwork:
         error = 0
         predicate_res = []
         for i in range(len(datas)):
-            predicate_res.append(self.forward_propagate(datas[i]))
+            predicate_res.append(self.forward_propagate([datas[i]]))
             error += get_loss(expects[i], self.output_cells)
         error = error / len(datas)
         return error, predicate_res

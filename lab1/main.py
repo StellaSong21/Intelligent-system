@@ -32,8 +32,8 @@ def back_propagate_train(input, expects, learn=0.05, limit=10000):
     for j in range(limit):
         print(j)
         for i in range(len(input)):
-            bp.forward_propagate(input[i])
-            bp.calculate_delta(expects[i])
+            bp.forward_propagate([input[i]])
+            bp.calculate_delta([expects[i]])
             bp.update_w(learn)
             bp.update_b(learn)
 
