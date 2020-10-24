@@ -41,9 +41,9 @@ if __name__ == '__main__':
             pass
         pass
 
-    bp.save('./data/create')
+    bp.save('./record/create')
     bpp = BPN.BPNetwork([1, 100, 100, 1], active_func=af.Sigmoid(), loss_func=lf.MSE, softmax=False, sin=True)
-    bpp.load('./data/create')
+    bpp.load('./record/create')
 
     # test
     testNum = 3000

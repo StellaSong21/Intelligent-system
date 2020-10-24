@@ -123,7 +123,7 @@ class BPNetwork:
             pass
         pass
 
-    def save(self, path='../data/'):
+    def save(self, path='../record/'):
         if not(os.path.exists(path)):
             os.makedirs(path)
 
@@ -143,7 +143,7 @@ class BPNetwork:
             pass
         pass
 
-    def load(self, path="../data/"):
+    def load(self, path="../record/"):
         # 读取神经网络
         num = 0
         for layer in self.layers:
