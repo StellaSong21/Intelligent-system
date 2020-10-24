@@ -34,12 +34,12 @@ class WeightLayer:
 
     def backward(self, input, err):
         next_err = np.dot(err, self.weights.T)
-        self.weights = self.weights + self.learn_w * np.dot(input.T, err)  # TODO 符号
-        self.biases = self.biases + self.learn_b * err  # TODO 符号
+        self.weights = self.weights + self.learn_w * np.dot(input.T, err)
+        self.biases = self.biases + self.learn_b * err
         return next_err
 
     def __str__(self):
-        return str(self.weights)
+        return "weights" + str(self.weights)
 
 
 class SinNormalize:
@@ -86,7 +86,7 @@ class BPNetwork:
             self.layers.append(SinNormalize(-1, 1))
             pass
 
-    def train(self, input, target):
+    def calculate(self, input, target, is_train=True):
         data = input
         H = [input]
         # forward
@@ -96,12 +96,15 @@ class BPNetwork:
             pass
         # 误差
         loss = np.mean(self.loss_func(data, target))
-        # backward
-        err = target - data
-        for i in range(len(self.layers) - 1, -1, -1):
-            h = H[i]
-            err = self.layers[i].backward(h, err)
-            pass
+
+        if is_train:
+            # backward
+            err = target - data
+            for i in range(len(self.layers) - 1, -1, -1):
+                h = H[i]
+                err = self.layers[i].backward(h, err)
+                pass
+
         return loss
 
     def query(self, input):
