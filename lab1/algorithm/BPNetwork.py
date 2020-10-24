@@ -1,6 +1,6 @@
 import numpy as np
-import ActiveFunction as af
-import LossFunction as lf
+from algorithm import LossFunction as lf, ActiveFunction as af
+import os
 
 
 class ActiveLayer:
@@ -80,13 +80,15 @@ class BPNetwork:
                                    learn_w=learn_w, learn_b=learn_b,
                                    weight=1.0 / layer_list[layers_count - 2], bias=0.2)
         self.layers.append(weight_layer)
+        # for layer in self.layers:
+        #     print(layer.__class__)
         if softmax:
             pass
         if sin:
             self.layers.append(SinNormalize(-1, 1))
             pass
 
-    def calculate(self, input, target, is_train=True):
+    def train(self, input, target):
         data = input
         H = [input]
         # forward
@@ -96,23 +98,20 @@ class BPNetwork:
             pass
         # 误差
         loss = np.mean(self.loss_func(data, target))
+        # backward
+        err = target - data
+        for i in range(len(self.layers) - 1, -1, -1):
+            h = H[i]
+            err = self.layers[i].backward(h, err)
+            pass
+        return data, loss
 
-        if is_train:
-            # backward
-            err = target - data
-            for i in range(len(self.layers) - 1, -1, -1):
-                h = H[i]
-                err = self.layers[i].backward(h, err)
-                pass
-
-        return loss
-
-    def query(self, input):
+    def query(self, input, target):
         data = input
         for layer in self.layers:
             data = layer.forward(data)
             pass
-        return data
+        return data, np.mean(self.loss_func(data, target))
 
     def append(self, layer):
         self.layers.append(layer)
@@ -121,5 +120,42 @@ class BPNetwork:
     def check(self):
         for layer in self.layers:
             print(layer)
+            pass
+        pass
+
+    def save(self, path='../data/'):
+        if not(os.path.exists(path)):
+            os.makedirs(path)
+
+        # 储存神经网络
+        num = 0
+        for layer in self.layers:
+            if not(isinstance(layer, WeightLayer)):
+                continue
+            file_name = "w" + str(num) + ".npy"
+            file = os.path.join(path, file_name)
+            np.save(file, layer.weights)
+
+            file_name = "b" + str(num) + ".npy"
+            file = os.path.join(path, file_name)
+            np.save(file, layer.biases)
+            num += 1
+            pass
+        pass
+
+    def load(self, path="../data/"):
+        # 读取神经网络
+        num = 0
+        for layer in self.layers:
+            if not(isinstance(layer, WeightLayer)):
+                continue
+            file_name = "w" + str(num) + ".npy"
+            file = os.path.join(path, file_name)
+            layer.weights = np.load(file)
+
+            file_name = "b" + str(num) + ".npy"
+            file = os.path.join(path, file_name)
+            layer.biases = np.load(file)
+            num += 1
             pass
         pass
