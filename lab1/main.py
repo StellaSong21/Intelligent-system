@@ -9,7 +9,7 @@ if __name__ == '__main__':
     根据经验公式：
     h = (n+m)
     '''
-    bp = BPN.BPNetwork([1, 100, 100, 1], active_func=af.Sigmoid(), loss_func=lf.MSE, softmax=False, sin=True)
+    bp = BPN.BPNetwork([1, 100, 100, 1], active_func=af.Sigmoid(), loss_func=lf.squared_error, softmax=False, sin=True)
     trainNum = 4000
     train_each_loss = np.zeros(trainNum, dtype='float')
     trainInput = np.random.rand(trainNum) * 2 * np.pi - 1 * np.pi
@@ -41,9 +41,9 @@ if __name__ == '__main__':
             pass
         pass
 
-    bp.save('./record/create')
-    bpp = BPN.BPNetwork([1, 100, 100, 1], active_func=af.Sigmoid(), loss_func=lf.MSE, softmax=False, sin=True)
-    bpp.load('./record/create')
+    bp.save('./record/BPNetwork/create')
+    bpp = BPN.BPNetwork([1, 100, 100, 1], active_func=af.Sigmoid(), loss_func=lf.squared_error, softmax=False, sin=True)
+    bpp.load('./record/BPNetwork/create')
 
     # test
     testNum = 3000

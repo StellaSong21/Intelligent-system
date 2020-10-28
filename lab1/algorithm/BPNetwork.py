@@ -48,11 +48,11 @@ class SinNormalize:
         self.low = low
         pass
 
-    def forward(self, x):
-        t1 = x > self.up
-        t2 = x < self.low
+    def forward(self, input):
+        t1 = input > self.up
+        t2 = input < self.low
         ch = t1 + 2 * t2
-        return np.choose(ch, (x, self.up, self.low))
+        return np.choose(ch, (input, self.up, self.low))
 
     def backward(self, input, targets):
         return targets
@@ -63,7 +63,7 @@ class SinNormalize:
 
 class BPNetwork:
     def __init__(self, layer_list, learn_w=0.05, learn_b=0.02,
-                 active_func=af.Function(), loss_func=lf.MSE,
+                 active_func=af.Function(), loss_func=lf.squared_error,
                  softmax=False, sin=False):
         layers_count = len(layer_list)
         self.loss_func = loss_func
@@ -123,14 +123,14 @@ class BPNetwork:
             pass
         pass
 
-    def save(self, path='../record/'):
-        if not(os.path.exists(path)):
+    def save(self, path='../record/BPNetwork'):
+        if not (os.path.exists(path)):
             os.makedirs(path)
 
         # 储存神经网络
         num = 0
         for layer in self.layers:
-            if not(isinstance(layer, WeightLayer)):
+            if not (isinstance(layer, WeightLayer)):
                 continue
             file_name = "w" + str(num) + ".npy"
             file = os.path.join(path, file_name)
@@ -143,11 +143,11 @@ class BPNetwork:
             pass
         pass
 
-    def load(self, path="../record/"):
+    def load(self, path="../record/BPNetwork"):
         # 读取神经网络
         num = 0
         for layer in self.layers:
-            if not(isinstance(layer, WeightLayer)):
+            if not (isinstance(layer, WeightLayer)):
                 continue
             file_name = "w" + str(num) + ".npy"
             file = os.path.join(path, file_name)
