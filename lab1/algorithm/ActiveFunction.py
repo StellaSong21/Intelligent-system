@@ -25,6 +25,9 @@ class Sigmoid(Function):
         fx = self.activate(x)
         return fx * (1 - fx)
 
+    def __str__(self):
+        return "Sigmoid"
+
 
 class Tanh(Function):
     def __init__(self):
@@ -36,6 +39,9 @@ class Tanh(Function):
 
     def deactivate(self, x):
         return 1 - (np.tanh(x)) ** 2
+
+    def __str__(self):
+        return "Tanh"
 
 
 class ReLU(Function):
@@ -50,3 +56,6 @@ class ReLU(Function):
         x[x <= 0] = 0
         x[x > 0] = 1
         return x
+
+    def __str__(self):
+        return "ReLU"
