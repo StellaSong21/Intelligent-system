@@ -1,0 +1,6 @@
+.idea/
+__pycache__/
+venv/
+DATASET/
+PART1/record/
+PART1/standard/
