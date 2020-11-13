@@ -10,10 +10,9 @@ import numpy as np
 
 from PART2.algorithm import CNN
 
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+transform = transforms.Compose([transforms.ToTensor()])
 
-trainset = torchvision.datasets.ImageFolder('./DATASET/train',
-                                            transform=transform)
+trainset = torchvision.datasets.ImageFolder('./DATASET/train', transform=transform)
 
 trainloader = DataLoader(trainset, batch_size=4,
                          shuffle=True, num_workers=0)
@@ -21,10 +20,11 @@ trainloader = DataLoader(trainset, batch_size=4,
 net = CNN.CNN()
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-for epoch in range(2):  # loop over the dataset multiple times
+optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
+for epoch in range(10):  # loop over the dataset multiple times
 
     running_loss = 0.0
+    running_acc = 0.0
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
@@ -41,10 +41,18 @@ for epoch in range(2):  # loop over the dataset multiple times
 
         # print statistics
         running_loss += loss.item()
-        if i % 20 == 19:  # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 20))
-            running_loss = 0.0
+        # if i % 20 == 19:  # print every 2000 mini-batches
+        #     print('[%d, %5d] loss: %.3f' %
+        #           (epoch + 1, i + 1, running_loss / 20))
+        #     running_loss = 0.0
+        _, predict = torch.max(outputs, 1)
+        correct_num = (predict == labels).sum()
+        running_acc += correct_num.item()
+
+    running_loss /= len(trainset)
+    running_acc /= len(trainset)
+
+    print("[%d/%d] Loss: %.5f, Acc: %.2f" % (epoch + 1, 10, running_loss, 100 * running_acc))
 
 print('Finished Training')
 
