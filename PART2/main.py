@@ -1,85 +1,69 @@
 import torch
 import torch.nn as nn
-import torch.tensor as tensor
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchvision
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-import numpy as np
 
 from PART2.algorithm import CNN
 
-transform = transforms.Compose([transforms.ToTensor()])
 
-trainset = torchvision.datasets.ImageFolder('./DATASET/train', transform=transform)
-
-trainloader = DataLoader(trainset, batch_size=4,
-                         shuffle=True, num_workers=0)
-
-net = CNN.CNN()
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
-for epoch in range(10):  # loop over the dataset multiple times
-
+def calculate(dataset, dataloader, net, criterion, train=False, optimizer=None):
     running_loss = 0.0
     running_acc = 0.0
-    for i, data in enumerate(trainloader, 0):
+    for i, data in enumerate(dataloader, 0):
         # get the inputs
         inputs, labels = data
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+        if train:
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+        else:
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
 
-        # forward + backward + optimize
-        outputs = net(inputs)
-
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        # print statistics
         running_loss += loss.item()
-        # if i % 20 == 19:  # print every 2000 mini-batches
-        #     print('[%d, %5d] loss: %.3f' %
-        #           (epoch + 1, i + 1, running_loss / 20))
-        #     running_loss = 0.0
         _, predict = torch.max(outputs, 1)
-        correct_num = (predict == labels).sum()
+        correct_num = torch.sum(torch.eq(labels, predict))
         running_acc += correct_num.item()
 
-    running_loss /= len(trainset)
-    running_acc /= len(trainset)
+    running_loss /= len(dataset)
+    running_acc /= len(dataset)
 
-    print("[%d/%d] Loss: %.5f, Acc: %.2f" % (epoch + 1, 10, running_loss, 100 * running_acc))
-
-print('Finished Training')
-
-testset = torchvision.datasets.ImageFolder('./DATASET/train',
-                                           transform=transform)
-
-testloader = DataLoader(testset, batch_size=25,
-                        shuffle=True, num_workers=0)
+    return running_loss, running_acc
 
 
-def imshow(img):
-    img = img / 2 + 0.5  # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
+if __name__ == '__main__':
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
+    # 训练集
+    trainset = torchvision.datasets.ImageFolder('./DATASET/train',
+                                                transform=transform)
+    trainloader = DataLoader(trainset, batch_size=4,
+                             shuffle=True, num_workers=0)
 
-classes = ('1', '2', '3', '4',
-           '5', '6', '7', '8', '9', '10', '11', '12')
+    # 测试集
+    testset = torchvision.datasets.ImageFolder('./DATASET/tests',
+                                               transform=transform)
+    testloader = DataLoader(testset, batch_size=4,
+                            shuffle=True, num_workers=0)
+    # 卷积神经网络
+    net = CNN.CNN()
+    # 损失函数 [pytorch 中交叉熵包括了 softmax 层]
+    criterion = nn.CrossEntropyLoss()
+    # 优化器，调整参数
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9, weight_decay=0.01)
 
-dataiter = iter(testloader)
-images, labels = dataiter.next()  #
-imshow(torchvision.utils.make_grid(images, nrow=5))  # nrow是每行显示的图片数量，缺省值为8
-print('GroundTruth: '
-      , " ".join('%5s' % classes[labels[j]] for j in range(25)))  # 打印前25个GT（test集里图片的标签）
-outputs = net(images)
-_, predicted = torch.max(outputs.data, 1)
+    # 训练参数
+    count = 50  # 训练次数
 
-print('Predicted: ', " ".join('%5s' % classes[predicted[j]] for j in range(25)))
-# 打印前25个预测值
+    # 训练过程
+    for epoch in range(count):
+        train_loss, train_acc = calculate(trainset, trainloader, net, criterion, True, optimizer)
+        test_loss, test_acc = calculate(testset, testloader, net, criterion)
+        print("[%d/%d] Loss: %.5f, Acc: %.2f%%" % (epoch + 1, count, test_loss, 100 * test_acc))
+
+    print('Finished Training')
