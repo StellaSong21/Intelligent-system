@@ -3,7 +3,56 @@
 [TOC]
 
 ### 1. 代码基本架构
+#### 1.1 代码的目录结构
 
+```sh
+.
+└── src								# 代码文件夹
+    ├── DATASET						# 数据集
+    │   └── train						# 训练集
+    ├── algorithm					# 算法集
+    │   ├── ActiveFunction.py			# 激活函数：sigmoid、tanh、ReLU
+    │   ├── BPNetwork.py				# BP神经网络相关
+    │   ├── ImgUtil.py					# 图片处理相关的函数 
+    │   ├── LossFunction.py				# 损失函数：squred loss 和 cross entropy
+    │   └── SinUtil.py					# 拟合 sin 函数时的辅助函数[生成训练集和测试集]
+    ├── record						# 最终的模型
+    │   ├── classify					# 分类问题的模型
+    │   └── sin							# 拟合问题的模型
+    ├── classify.py					# 分类问题的训练过程源码
+    ├── sin.py						# 拟合问题的训练过程源码
+    └── tests						# 比较不同的参数
+        ├── test_classify				# 分类问题
+        │   ├── record						# 记录不同参数训练出的模型
+        │   ├── test_bias.py				# bias 初始值
+        │   ├── test_delta_alpha.py			# 学习率变化梯度
+        │   ├── test_epoch.py				# 训练次数
+        │   ├── test_learn_b.py				# bias 的初始学习率
+        │   ├── test_learn_w.py				# weight 的初始学习率
+        │   ├── test_units.py				# 隐层神经元个数
+        │   └── test_weight.py				# weight 初始值
+        └── test_sin					# 拟合问题
+            ├── record						# 记录不同参数训练处的模型用以比较
+            ├── test_active_func.py			# 不同的激活函数
+            ├── test_epoch.py				# 训练次数
+            ├── test_learn_rate.py			# 学习率
+            └── test_units.py				# 隐层神经元的个数
+
+```
+
+
+
+#### 1.2 BPNetwork.py
+
+> 其他源代码几乎是自解释的
+
+![image-20201101170913825](.\assets\BPNetwork.png)
+
+1. Active layer：激活函数层
+2. Weight layer：线性层
+3. SoftmaxLayer：分类问题的最后一层
+4. SinNormalizelayer：拟合 sin 函数时的归一化层，同样放在神经网络的最后一层
+5. BPNetwork：BP 神经网络，由以上四种的实例构成
 
 
 
@@ -58,7 +107,7 @@ weight 和 bias 学习率：0.05
 
 下图表示不同的学习率情况下，平均 loss 随训练次数的变化，并在图例中给出了经过 40 次循环后，训练出的模型在验证集上的损失率。通过对比，学习率取 0.05 较好，损失率曲线更平滑，在验证集上的损失率也低
 
-![learn_rate](.\图片\sin\learn_rate.png)
+![learn_rate](.\assets\sin\learn_rate.png)
 
 
 
@@ -84,7 +133,7 @@ weight 和 bias 学习率：0.05
 
 下图表示不同的神经元个数情况下，平均 loss 随训练次数的变化，并在图例中给出了经过 40 次循环后，训练出的模型在验证集上的损失率。在下图中，不同的隐层神经元个数对损失率变化影响不大，相比而言，隐层神经元有 50 个的时候，损失率变化平滑，在验证集上的损失率也比较小
 
-![hidden](.\图片\sin\hidden.png)
+![hidden](.\assets\sin\hidden.png)
 
 
 
@@ -110,7 +159,7 @@ weight 和 bias 学习率：0.05
 
 下图表示平均 loss 随训练次数的变化，可以看出 50 次之后，损失率随训练次数下降缓慢，且此后精度已经低于 0.01，因此可以得出结论：在以上参数设置下，训练 70 次即可
 
-![epoch](.\图片\sin\epoch.png)
+![epoch](.\assets\sin\epoch.png)
 
 
 
@@ -162,7 +211,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 下图表示不同的学习率情况下，平均 loss 随训练次数的变化，并在图例中给出了经过 10 次循环后，训练出的模型在验证集上的精确度。通过对比，weight 的学习率 learn_w 取 0.01 更好，loss 更小，准确率也更高
 
-![learn_w](.\图片\classify\learn_w.png)
+![learn_w](.\assets\classify\learn_w.png)
 
 
 
@@ -188,7 +237,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 下图表示不同的学习率情况下，平均 loss 随训练次数的变化曲线，并在图例中给出了经过 10 次循环后，训练出的模型在验证集上的准确度。从图中可以看出，对 bias 设置不同学习率的差别不是很大，此处更倾向于取 learn_b = 0.05，出于两方面的考虑：一是不会太小，使网络在开始时候调整的速率太慢；二是因为 bias 的值一直是1，0.05 也不会太大，使 bias 对网络的影响过大
 
-![learn_b](.\图片\classify\learn_b.png)
+![learn_b](.\assets\classify\learn_b.png)
 
 
 
@@ -214,7 +263,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 下图表示不同的隐层情况下，平均 loss 随训练次数的变化曲线，并在图例中给出了经过 10 次循环后，训练出的模型在验证集上的准确度。通过曲线图可以看出，隐层设为 [100]，[150]，[200]，[250]，[300]的 loss 趋势变化相同，此处取隐层设置为 [250]
 
-![hidden](.\图片\classify\hidden.png)
+![hidden](.\assets\classify\hidden.png)
 
 
 
@@ -240,7 +289,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 下图表示weight设置不同初始值的情况下，平均 loss 随训练次数的变化，并在图例中给出了经过50次循环后，训练出的模型在验证集上的精确度。通过对比可以看出，weight 取 -1.0 / sqrt(# of input units) 和 -0.1， -0.2 三种情况下产生的结果很接近，考虑到第一种对网络的适用性更强，取前者
 
-![weight](.\图片\classify\weight.png)
+![weight](.\assets\classify\weight.png)
 
 
 
@@ -266,7 +315,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 下图表示 bias 设置不同初始值的情况下，平均 loss 随训练次数的变化，并在图例中给出了经过50次循环后，训练出的模型在验证集上的精确度。可以看出 bias 取不同的初始值，对结果的影响并不大，此处取 bias=-0.1
 
-![bias](.\图片\classify\bias.png)
+![bias](.\assets\classify\bias.png)
 
 
 
@@ -296,7 +345,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 下图表示不同的学习率梯度变化情况下，平均 loss 随训练次数的变化，并在图例中给出了经过50次循环后，训练出的模型在验证集上的精确度。可以看出 `pow(0.8, (num)/2)`  的loss变化平滑，准确度更高
 
-![alpha_rate](.\图片\classify\alpha_rate.png)
+![alpha_rate](.\assets\classify\alpha_rate.png)
 
 
 
@@ -328,7 +377,7 @@ bias 的学习率：0.005，每经过 2 个 epoch，就乘以 0.8
 
 因此，训练次数选择 30
 
-![epoch](.\图片\classify\epoch.png)
+![epoch](.\assets\classify\epoch.png)
 
 
 

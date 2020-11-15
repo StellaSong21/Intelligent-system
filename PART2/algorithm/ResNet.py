@@ -7,6 +7,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchvision
 import torchvision.transforms as transforms
+import numpy as np
+import matplotlib.pyplot as plt
 
 from PART2.algorithm import Util
 
@@ -174,16 +176,38 @@ if __name__ == '__main__':
     # 训练参数
     count = 50  # 训练次数
 
+    loss = np.zeros(count, dtype=float)
+    acc = np.zeros(count, dtype=float)
+
     # 训练过程
     for epoch in range(count):
         start_time = time.time()
-        train_loss, train_acc = Util.calculate(trainset, trainloader, net, criterion, True, optimizer)
-        torch.save(net.state_dict(), os.path.join(path, str(layers[i]), str(epoch + 1) + '.pt'))
+        # train_loss, train_acc = Util.calculate(trainset, trainloader, net, criterion, True, optimizer)
+        # torch.save(net.state_dict(), os.path.join(path, str(layers[i]), str(epoch + 1) + '.pt'))
         net.load_state_dict(torch.load(os.path.join(path, str(layers[i]), str(epoch + 1) + '.pt')))
         net.eval()
         test_loss, test_acc = Util.calculate(testset, testloader, net, criterion)
         end_time = time.time()
+        loss[epoch], acc[epoch] = test_loss, test_acc
         print("[%d/%d] Loss: %.5f, Acc: %.2f%%, time: %.2fs" % (
             epoch + 1, count, test_loss, 100 * test_acc, (end_time - start_time)))
+
+    # 创建画板
+    fig = plt.figure()
+
+    # 创建画纸
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax2 = fig.add_subplot(1, 2, 2)
+    # test result
+    ax1.set_title('Loss')
+    ax1.set_xlabel('epoch')
+    ax1.set_ylabel('loss')
+    ax1.plot(range(count + 1)[1:], loss)
+
+    ax2.set_title('Accuracy')
+    ax2.set_xlabel('epoch')
+    ax2.set_ylabel('accuracy')
+    ax2.plot(range(count + 1)[1:], acc)
+    plt.show()
 
     print('Finished Training')

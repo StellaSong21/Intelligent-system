@@ -2,6 +2,4 @@
 __pycache__/
 venv/
 DATASET/
-PART1/record/
-PART1/standard/
-/PART2/data/
+record/
