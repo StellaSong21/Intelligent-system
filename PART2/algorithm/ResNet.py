@@ -147,8 +147,7 @@ if __name__ == '__main__':
     transform = transforms.Compose([transforms.RandomResizedCrop(224),
                                     transforms.ToTensor(), transforms.RandomHorizontalFlip(),
                                     transforms.Normalize([0.485, 0.456, 0.406],
-                                                         [0.229, 0.224,
-                                                          0.225])])
+                                                         [0.229, 0.224, 0.225])])
 
     # 训练集
     trainset = torchvision.datasets.ImageFolder('../DATASET/train',
