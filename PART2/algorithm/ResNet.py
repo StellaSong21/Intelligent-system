@@ -14,7 +14,7 @@ from PART2.algorithm import Util
 
 
 class ResNetModel(nn.Module):
-    def __init__(self, num_classes=1000, layer_num=None, bottleneck=False):
+    def __init__(self, num_classes=12, layer_num=None, bottleneck=False):
         super(ResNetModel, self).__init__()
 
         # conv1

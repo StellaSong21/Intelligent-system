@@ -1,5 +1,5 @@
 import torch
-
+import os
 
 def calculate(dataset, dataloader, net, criterion, train=False, optimizer=None):
     running_loss = 0.0
@@ -27,3 +27,22 @@ def calculate(dataset, dataloader, net, criterion, train=False, optimizer=None):
     running_acc /= len(dataset)
 
     return running_loss, running_acc
+
+
+def get_test_set(path, start=1, end=1800):
+    set = []
+    for item in range(start, end + 1):
+        file = str(item) + ".bmp"
+        cur_path = os.path.join(path, file)
+        set.append(cur_path)
+        pass
+    return set
+
+
+def write_result(result, file='../record/interview/res.txt'):
+    f = open(file, 'w')
+    for res in result:
+        f.write(str(res) + '\n')
+        pass
+    f.close()
+    pass

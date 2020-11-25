@@ -77,7 +77,7 @@ def get_test_set(path, start=1, end=1800):
     return set
 
 
-def write_result(result, file='../record/result/res.txt'):
+def write_result(result, file='../record/interview/res.txt'):
     f = open(file, 'w')
     for res in result:
         f.write(str(res) + '\n')
