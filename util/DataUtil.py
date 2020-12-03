@@ -10,7 +10,7 @@
 6. 标点符号等非中文的处理
 """
 
-
+# 有监督学习，直接统计词频
 def statics(filepath):
     dict_start = {'B': 0, 'I': 0, 'E': 0, 'S': 0}
     dict_trans = {'B': {'I': 0, 'E': 0},
