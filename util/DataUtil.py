@@ -9,6 +9,8 @@
 {'B':{'I':0,'E':0}, ...}
 6. 标点符号等非中文的处理
 """
+import math
+
 
 # 有监督学习，直接统计词频
 def statics(filepath):
@@ -33,10 +35,26 @@ def statics(filepath):
         # dict_emit
         y = dict_emit.get(x[1])
         y[x[0]] = y[x[0]] + 1 if x[0] in y else 1
-    print(dict_emit)
+    print(dict_start)
+    print('B: ', math.log(dict_start['B'] / (dict_start['B'] + dict_start['S'])))
+    print('S: ', math.log(dict_start['S'] / (dict_start['B'] + dict_start['S'])))
+    print(dict_trans)
+    print('B->I: ', math.log(dict_trans['B']['I'] / (dict_trans['B']['I'] + dict_trans['B']['E'])))
+    print('B->E: ', math.log(dict_trans['B']['E'] / (dict_trans['B']['I'] + dict_trans['B']['E'])))
+    print('I->I: ', math.log(dict_trans['I']['I'] / (dict_trans['I']['I'] + dict_trans['I']['E'])))
+    print('I->E: ', math.log(dict_trans['I']['E'] / (dict_trans['I']['I'] + dict_trans['I']['E'])))
+    print('E->B: ', math.log(dict_trans['E']['B'] / (dict_trans['E']['B'] + dict_trans['E']['S'])))
+    print('E->S: ', math.log(dict_trans['E']['S'] / (dict_trans['E']['B'] + dict_trans['E']['S'])))
+    print('S->B: ', math.log(dict_trans['S']['B'] / (dict_trans['S']['B'] + dict_trans['S']['S'])))
+    print('S->S: ', math.log(dict_trans['S']['S'] / (dict_trans['S']['B'] + dict_trans['S']['S'])))
+    # print(dict_emit)
     return dict_start, dict_trans, dict_emit
     # return [π, A, B]
     # 可以直接返回次数，因为概率过小，不知道有没有必要
+
+
+def statics_char(filepath):
+    pass
 
 
 def take_second(elem):
