@@ -53,8 +53,43 @@ def statics(filepath):
     # 可以直接返回次数，因为概率过小，不知道有没有必要
 
 
-def statics_char(filepath):
-    pass
+'''
+1. 统计字符集后index查找顺序
+2. 统计过程中统计输出顺序list，但是需要边统计边确定是否在之前已经统计过
+'''
+
+
+def stat_charset(filepaths, encoding='utf8'):
+    i = 0
+    charset = [dict(), dict()]  # 1:'中', '中':1
+    observes = []
+    indexes = []
+    for filepath in filepaths:
+        j = 0
+        observe_tmp = []
+        index_tmp = dict()
+        file = open(filepath, encoding=encoding)
+        for line in file:
+            x = line.split()
+            if len(x) is 0:
+                continue
+            if x[0] in charset[1]:
+                observe_tmp.append(charset[1][x[0]])
+            else:
+                observe_tmp.append(i)
+                charset[0][i] = x[0]
+                charset[1][x[0]] = i
+                i += 1
+            pass
+            if x[0] in index_tmp:
+                index_tmp[x[0]].append(j)
+            else:
+                index_tmp[x[0]] = [j]
+            j += 1
+            pass
+        observes.append(observe_tmp)
+        indexes.append(index_tmp)
+    return charset, observes, indexes
 
 
 def take_second(elem):
@@ -67,6 +102,25 @@ def test_list_sort():
     print('排序列表：', random)
 
 
+import numpy as np
+
+
+def sum_log(arr):
+    max_value = np.max(arr)
+    return math.log(np.sum(np.exp(arr - max_value))) + max_value
+
+
 if __name__ == '__main__':
-    statics('../DATASET/dataset1/train.utf8')
+    # charset1, observes = stat_charset(['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8'])
+    # print(charset1)
+    # print(observes[0][:100])
+
+    # arr = np.arange(12 * 4).reshape((12, 4))
+    # tmp = arr.reshape((12, -1))
+    # print(arr)
+    # for i in range(4):
+    #     print(arr[:, i])
+    #     print(sum_log(arr[:, i]) == sum_log(tmp[:, i]))
+
+    print(math.log(0.0000000001))
     pass
