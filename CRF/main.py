@@ -27,49 +27,42 @@ class CRFModel(object):
 
     # T: 训练次数
     # self.templates
-    def train(self, T, sequence, tags, templates):
+    def train(self, T, sequence, tags, space):
         for i in range(T):
-            states = self.viterbi(sequence)
-            for t in range(len(sequence)):
-                # 不处理换段
-                if sequence[t] == ' ':
-                    continue
-
-                # Unigram
-                for template in templates[0]:
-                    for j in range(len(template)):
-                        pass
-                    pass
-
-                # Bigram
-                for template in templates[1]:
-                    for j in range(len(template)):
-                        pass
-                    pass
-            pass
+            states = self.viterbi(sequence, space)
+            self.update(sequence, states, tags, space)
         pass
 
-    def update(self, sequence, output, target, templates):
+    def update(self, sequence, output, target, space):
+        for i in range(len(space) - 1):
+            self.sub_update(sequence[space[i] + 1, space[i + 1]], output[space[i] + 1, output[i + 1]],
+                            target[space[i] + 1, target[i + 1]])
+
+    def sub_update(self, sequence, output, target):
         sequence_len = len(sequence)
-
         for index in range(sequence_len):
-            if output[index] == ' ':
-                continue
+            # 更新 unigram
+            for utmpl_index in range(len(self.templates[0])):
+                y = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
+                     for i in self.templates[0][utmpl_index]]
+                t = y.copy()
+                y.insert(0, output[index])
+                t.insert(0, target[index])
+                self.u_lambda[utmpl_index][y] = self.u_lambda[utmpl_index].get(y, 0) - 1
+                self.u_lambda[utmpl_index][t] = self.u_lambda[utmpl_index].get(t, 0) + 1
+                pass
 
-            for u_templates in templates[0]:
-                for k in range(len(u_templates)):
-                    for i in range(len(u_templates[k])):
-                        if index + i < 0 or index + i >= sequence_len:
-                            # TODO：更新对应模板，(字符，U|B，第几个模板)
-                            self.alpha[sequence[index]][0][k] = 0
-                            continue
-                        pass
-                    pass
-
-            for b_templates in templates[1]:
-                for b_temp in range(len(b_templates)):
-                    pass
-        pass
+            # 更新 bigram
+            for btmpl_index in range(len(self.templates[1])):
+                y = [output[index - 1] if index > 0 else None, output[index]]
+                t = [target[index - 1] if index > 0 else None, target[index]]
+                tmp = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
+                       for i in self.templates[1][btmpl_index]]
+                y.extend(tmp)
+                t.extend(tmp)
+                self.b_mu[btmpl_index][y] = self.b_mu[btmpl_index].get(y, 0) - 1
+                self.b_mu[btmpl_index][t] = self.b_mu[btmpl_index].get(t, 0) + 1
+                pass
 
     def viterbi(self, sequence, space):
         states = []
