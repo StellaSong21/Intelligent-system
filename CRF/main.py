@@ -10,8 +10,9 @@ import numpy as np
 '''
 
 
-class CRFModel:
+class CRFModel(object):
     def __init__(self):
+        super(CRFModel, self).__init__()
         datapaths = ['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8']
         tempaths = ['../DATASET/dataset1/template.utf8', '../DATASET/dataset2/template.utf8']
         self.states = ['B', 'I', 'E', 'S']
@@ -19,17 +20,16 @@ class CRFModel:
         self.templates = tutil.get_templates(tempaths)
         print(self.templates)
         self.temp_len = len(self.templates[0]) + len(self.templates[1])
-        self.u_lambda = [[] for i in range(len(self.templates[0]))]
-        self.b_mu = [[] for i in range(len(self.templates[1]))]
-        print(self.u_lambda)
-        print(self.b_mu)
-        # N * M * T
+        self.u_lambda = [dict() for i in range(len(self.templates[0]))]
+        self.b_mu = [dict() for i in range(len(self.templates[1]))]
+        # self.u_lambda[0]['a'] = 1
         pass
 
     # T: 训练次数
     # self.templates
     def train(self, T, sequence, tags, templates):
         for i in range(T):
+            states = self.viterbi(sequence)
             for t in range(len(sequence)):
                 # 不处理换段
                 if sequence[t] == ' ':
@@ -71,28 +71,75 @@ class CRFModel:
                     pass
         pass
 
-    def viterbi(self, sequence):
+    def viterbi(self, sequence, space):
+        states = []
+        for i in range(len(space) - 1):
+            states.extend(self.sub_viterbi(sequence[space[i] + 1, space[i + 1]]))
+            states.append(' ')
+        states.pop()
+        return states
+
+    def sub_viterbi(self, sequence):
         sequence_len = len(sequence)
-
-        observe_len = len(observe)
         states_len = len(self.states)
-        path = np.zeros((observe_len, states_len), dtype=int)
-        deltas = np.zeros((observe_len, states_len), dtype=float)
+        utmpl_len = len(self.templates[0])
+        btmpl_len = len(self.templates[1])
 
-        deltas[0, :] = self.PI + self.B[:, observe[0]]
-        path[0, :] = np.arange(states_len)
+        states = ['0' for i in range(sequence_len)]
+        score = np.zeros((sequence_len, states_len, states_len), dtype=int)
+        u_score = np.zeros(len(self.states), dtype=int)
+        b_score = np.zeros((states_len, states_len), dtype=int)
 
-        for t in range(1, observe_len, 1):
-            for i in range(states_len):
-                tmp = deltas[t - 1, :] + self.A[:, i]
-                deltas[t][i], path[t][i] = np.max(tmp) + self.B[i][observe[t]], np.argmax(tmp)
-                if path[t][i] in [1, 2]:
-                    print(path[t][i])
-        state = np.zeros(observe_len, dtype=int)
-        state[observe_len - 1] = 3 if deltas[observe_len - 1][3] >= deltas[observe_len - 1][2] else 2
-        for i in range(observe_len - 2, -1, -1):
-            state[i] = path[i + 1][state[i + 1]]
-        return state
+        for index in range(sequence_len):
+            for tmpl_index in range(utmpl_len):
+                u_score = self.u_score(sequence, index, tmpl_index)
+            for tmpl_index in range(btmpl_len):
+                b_score = self.b_score(sequence, index, tmpl_index)
+            score[index] = b_score + u_score
+
+        pos = list(np.unravel_index(np.argmax(score[-1], axis=None), score[-1].shape))
+        states[sequence_len - 1] = self.states[pos[0]]
+        sj_index = pos[1]
+
+        for index in range(sequence_len - 2, -1, -1):
+            states[index] = self.states[sj_index]
+            sj_index = np.argmax(score[index][sj_index])
+
+        return states
+
+    def u_score(self, sequence, index, template_index):
+        """
+        :param sequence: 观察序列
+        :param index: 当前字符在观察序列中的下标
+        :param template_index: 当前用的模板下标
+        :return: 按 self.states 的顺序返回每一种状态的分数
+        """
+        state_score = np.zeros(len(self.states), dtype=int)
+        sequence_len = len(sequence)
+        for s in range(len(self.states)):
+            list = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
+                    for i in self.templates[0][template_index]]
+            list.insert(0, self.states[s])
+            state_score[s] = self.u_lambda[template_index].get(tuple(list), 0)
+        return state_score
+
+    def b_score(self, sequence, index, template_index):
+        """
+        :param sequence: 观察序列
+        :param index: 当前字符在观察序列中的下标
+        :param template_index: 当前用的模板下标
+        :return: 返回 [si-1, si] 的分数
+        """
+        sequence_len = len(sequence)
+        states_len = len(self.states)
+        state_score = np.zeros((states_len, states_len), dtype=int)
+        for si in range(len(self.states)):
+            for sj in range(len(self.states)):
+                list = [self.states[si], self.states[sj]]
+                list.extend([sequence[index + i] if (index + i) in range(0, sequence_len) else None
+                             for i in self.templates[1][template_index]])
+                state_score[sj][si] = self.b_mu[template_index].get(tuple(list), 0)
+        return state_score
 
 
 if __name__ == '__main__':

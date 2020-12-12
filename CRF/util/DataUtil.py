@@ -102,7 +102,7 @@ def stat_charset1(filepaths, encoding='utf8'):
     tags = []
     for filepath in filepaths:
         i = 0
-        space_tmp = [0]
+        space_tmp = [-1]
         observe_tmp = []
         tag_tmp = []
         file = open(filepath, encoding=encoding)
