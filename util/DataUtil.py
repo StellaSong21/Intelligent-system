@@ -101,12 +101,13 @@ def stat_charset1(filepaths, encoding='utf8'):
     observes = []
     tags = []
     for filepath in filepaths:
-        i = 0
+        i = -1
         space_tmp = [0]
         observe_tmp = []
         tag_tmp = []
         file = open(filepath, encoding=encoding)
         for line in file:
+            i += 1
             x = line.split()
             if len(x) == 0:
                 space_tmp.append(i)
@@ -116,7 +117,6 @@ def stat_charset1(filepaths, encoding='utf8'):
             charset.add(x[0])
             observe_tmp.append(x[0])
             tag_tmp.append(x[1])
-            i += 1
             pass
         space_tmp.append(i)
         observes.append(observe_tmp)

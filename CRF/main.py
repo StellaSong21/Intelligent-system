@@ -1,6 +1,7 @@
 from CRF.util import DataUtil as dutil
 from CRF.util import TemplateUtil as tutil
 import numpy as np
+import time
 
 '''
 1. alpha 初始化，长度d？
@@ -13,30 +14,43 @@ import numpy as np
 class CRFModel(object):
     def __init__(self):
         super(CRFModel, self).__init__()
-        datapaths = ['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8']
-        tempaths = ['../DATASET/dataset1/template.utf8', '../DATASET/dataset2/template.utf8']
+        datapaths = ['../DATASET/dataset0/train.utf8', '../DATASET/dataset0/train.utf8']
+        tempaths = ['../DATASET/dataset0/template.utf8']
         self.states = ['B', 'I', 'E', 'S']
         self.charset, self.sequences, self.tags, self.space = dutil.stat_charset1(datapaths)
+        print(self.tags[0])
         self.templates = tutil.get_templates(tempaths)
         print(self.templates)
+        print(self.space[0])
+        print(len(self.sequences[0]))
+        print(self.sequences[0][-1])
         self.temp_len = len(self.templates[0]) + len(self.templates[1])
         self.u_lambda = [dict() for i in range(len(self.templates[0]))]
         self.b_mu = [dict() for i in range(len(self.templates[1]))]
-        # self.u_lambda[0]['a'] = 1
+        self.train(10, self.sequences[0], self.tags[0], self.space[0])
+        state_tmp = self.viterbi(self.sequences[1], self.space[1])
+        print(state_tmp)
         pass
 
     # T: 训练次数
     # self.templates
     def train(self, T, sequence, tags, space):
         for i in range(T):
+            print(i)
+            start = time.time()
             states = self.viterbi(sequence, space)
+            mid = time.time()
+            print(i, ", viterbi time: ", mid - start)
             self.update(sequence, states, tags, space)
+            end = time.time()
+            print(i, ", update time: ", end - mid)
+            print(i, ", time: ", end - start)
         pass
 
     def update(self, sequence, output, target, space):
         for i in range(len(space) - 1):
-            self.sub_update(sequence[space[i] + 1, space[i + 1]], output[space[i] + 1, output[i + 1]],
-                            target[space[i] + 1, target[i + 1]])
+            self.sub_update(sequence[space[i] + 1:space[i + 1]], output[space[i] + 1: space[i + 1]],
+                            target[space[i] + 1:space[i + 1]])
 
     def sub_update(self, sequence, output, target):
         sequence_len = len(sequence)
@@ -48,8 +62,8 @@ class CRFModel(object):
                 t = y.copy()
                 y.insert(0, output[index])
                 t.insert(0, target[index])
-                self.u_lambda[utmpl_index][y] = self.u_lambda[utmpl_index].get(y, 0) - 1
-                self.u_lambda[utmpl_index][t] = self.u_lambda[utmpl_index].get(t, 0) + 1
+                self.u_lambda[utmpl_index][tuple(y)] = self.u_lambda[utmpl_index].get(tuple(y), 0) - 1
+                self.u_lambda[utmpl_index][tuple(t)] = self.u_lambda[utmpl_index].get(tuple(t), 0) + 1
                 pass
 
             # 更新 bigram
@@ -60,14 +74,14 @@ class CRFModel(object):
                        for i in self.templates[1][btmpl_index]]
                 y.extend(tmp)
                 t.extend(tmp)
-                self.b_mu[btmpl_index][y] = self.b_mu[btmpl_index].get(y, 0) - 1
-                self.b_mu[btmpl_index][t] = self.b_mu[btmpl_index].get(t, 0) + 1
+                self.b_mu[btmpl_index][tuple(y)] = self.b_mu[btmpl_index].get(tuple(y), 0) - 1
+                self.b_mu[btmpl_index][tuple(t)] = self.b_mu[btmpl_index].get(tuple(t), 0) + 1
                 pass
 
     def viterbi(self, sequence, space):
         states = []
         for i in range(len(space) - 1):
-            states.extend(self.sub_viterbi(sequence[space[i] + 1, space[i + 1]]))
+            states.extend(self.sub_viterbi(sequence[space[i] + 1: space[i + 1]]))
             states.append(' ')
         states.pop()
         return states
