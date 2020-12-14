@@ -39,5 +39,5 @@ def str2template(string):
 
 
 if __name__ == '__main__':
-    templates = get_templates(['../../DATASET/dataset1/template.utf8', '../../DATASET/dataset2/template.utf8'])
+    templates = get_templates(['../../DATASET/dataset1/template0.utf8', '../../DATASET/dataset2/template0.utf8'])
     print(templates)
