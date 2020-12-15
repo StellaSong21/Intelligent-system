@@ -5,27 +5,27 @@ import time
 import matplotlib.pyplot as plt
 
 '''
-1. alpha 初始化，长度d？
-2. 训练误差如何计算？softmax？
 3. 训练的中止条件，如何防止过拟合？
 4. 如何处理未出现的字符？
+5. 取平均参数值
+6. 比较不同模板
+7. 分析数据
 '''
 
 
 class CRFModel(object):
     def __init__(self):
         super(CRFModel, self).__init__()
-        datapaths = ['../DATASET/dataset0/train.utf8', '../DATASET/dataset0/train.utf8']
+        datapaths = ['../DATASET/dataset1/train.utf8', '../DATASET/dataset0/train.utf8']
         tempaths = ['../DATASET/templates/template0.utf8']
         self.states = ['B', 'I', 'E', 'S']
         self.charset, self.sequences, self.tags = dutil.get_train_set(datapaths)
         self.templates = tutil.get_templates(tempaths)
-        self.temp_len = len(self.templates[0]) + len(self.templates[1])
-        self.u_lambda = [dict() for i in range(len(self.templates[0]))]
-        self.b_mu = [dict() for i in range(len(self.templates[1]))]
-        self.train(10, self.sequences[0], self.tags[0], self.sequences[1], self.tags[1])
-        state_tmp = self.viterbi(self.sequences[1])
-        print(state_tmp)
+        self.alpha = [[dict() for i in range(len(self.templates[0]))], [dict() for i in range(len(self.templates[1]))]]
+        # print(self.alpha)
+        self.train(50, self.sequences[0], self.tags[0], self.sequences[1], self.tags[1])
+        # state_tmp = self.viterbi(self.sequences[1])
+        # print(state_tmp)
         pass
 
     # T: 训练次数
@@ -41,12 +41,13 @@ class CRFModel(object):
 
             ####################### 测试部分 #######################
             test_states = self.viterbi(test_sequence)
-            print(test_states)
+            # print(test_states)
             correct = 0
             for j in range(len(test_sequence)):
                 if test_tags[j] == test_states[j]:
                     correct += 1
             test_loss[i] = 1.0 * correct / len(test_sequence)
+            print(test_loss[i])
             #######################################################
 
             start = time.time()
@@ -83,25 +84,20 @@ class CRFModel(object):
         for index in range(sequence_len):
             # 更新 unigram
             for utmpl_index in range(len(self.templates[0])):
-                y = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
-                     for i in self.templates[0][utmpl_index]]
-                t = y.copy()
-                y.insert(0, output[index])
-                t.insert(0, target[index])
-                self.u_lambda[utmpl_index][tuple(y)] = self.u_lambda[utmpl_index].get(tuple(y), 0) - 1
-                self.u_lambda[utmpl_index][tuple(t)] = self.u_lambda[utmpl_index].get(tuple(t), 0) + 1
+                y = self.get_key([output[index]], sequence, index, self.templates[0][utmpl_index])
+                t = self.get_key([target[index]], sequence, index, self.templates[0][utmpl_index])
+                self.alpha[0][utmpl_index][y] = self.alpha[0][utmpl_index].get(y, 0) - 1
+                self.alpha[0][utmpl_index][t] = self.alpha[0][utmpl_index].get(t, 0) + 1
                 pass
 
             # 更新 bigram
             for btmpl_index in range(len(self.templates[1])):
-                y = [output[index - 1] if index > 0 else None, output[index]]
-                t = [target[index - 1] if index > 0 else None, target[index]]
-                tmp = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
-                       for i in self.templates[1][btmpl_index]]
-                y.extend(tmp)
-                t.extend(tmp)
-                self.b_mu[btmpl_index][tuple(y)] = self.b_mu[btmpl_index].get(tuple(y), 0) - 1
-                self.b_mu[btmpl_index][tuple(t)] = self.b_mu[btmpl_index].get(tuple(t), 0) + 1
+                y = self.get_key([output[index - 1] if index > 0 else None, output[index]],
+                                 sequence, index, self.templates[1][btmpl_index])
+                t = self.get_key([target[index - 1] if index > 0 else None, target[index]],
+                                 sequence, index, self.templates[1][btmpl_index])
+                self.alpha[1][btmpl_index][y] = self.alpha[1][btmpl_index].get(y, 0) - 1
+                self.alpha[1][btmpl_index][t] = self.alpha[1][btmpl_index].get(t, 0) + 1
                 pass
 
     def viterbi(self, sequence):
@@ -116,71 +112,58 @@ class CRFModel(object):
         btmpl_len = len(self.templates[1])
 
         states = ['0' for i in range(sequence_len)]
-        score = np.zeros((sequence_len, states_len, states_len), dtype=int)
-        u_score = np.zeros(len(self.states), dtype=int)
-        b_score = np.zeros((states_len, states_len), dtype=int)
 
-        # 初始化
+        score = np.zeros((sequence_len, states_len), dtype=int)
+        path = np.zeros((sequence_len, states_len), dtype=int)
+
+        # 1. 初始化
         for tmpl_index in range(utmpl_len):
-            u_score += self.u_score(sequence, 0, tmpl_index, None)
+            score[0] += self.get_score_tmp(sequence, 0, 0, tmpl_index, None)
         for tmpl_index in range(btmpl_len):
-            b_score += self.b_score(sequence, 0, tmpl_index, None)
-        score[0] = b_score + u_score
+            score[0] += self.get_score_tmp(sequence, 0, 1, tmpl_index, None)
 
+        # print('score[0]:', score[0])
+        # time.sleep(1)
+
+        # 2. 递推
         for index in range(1, sequence_len, 1):
-            for si in range(states_len):
-                for sj in range(states_len):
+            state_score = self.get_score(sequence, index)
+            state_score += score[index - 1].reshape(1, -1).T
+            for sj in range(states_len):
+                score[index][sj], path[index][sj] = np.max(state_score[:, sj]), np.argmax(state_score[:, sj])
 
-            for tmpl_index in range(utmpl_len):
-                u_score += self.u_score(sequence, index, tmpl_index)
-            for tmpl_index in range(btmpl_len):
-                b_score += self.b_score(sequence, index, tmpl_index)
-            score[index] = b_score + u_score
+        # 3. 中止
+        sj = np.argmax(score[-1])
+        states[-1] = self.states[int(sj)]
 
-        pos = list(np.unravel_index(np.argmax(score[-1], axis=None), score[-1].shape))
-        states[sequence_len - 1] = self.states[pos[1]]
-        sj_index = pos[0]
-
-        for index in range(sequence_len - 2, -1, -1):
-            states[index] = self.states[sj_index]
-            sj_index = np.argmax(score[index][:, sj_index])
+        # 4. 回溯
+        for index in range(sequence_len - 1, 0, -1):
+            si = path[index][sj]
+            states[index - 1] = self.states[si]
+            sj = si
+            pass
 
         return states
 
-    def u_score(self, sequence, index, template_index, last_tag):
-        """
-                :param sequence: 观察序列
-                :param index: 当前字符在观察序列中的下标
-                :param template_index: 当前用的模板下标
-                :return: 按 self.states 的顺序返回每一种状态的分数
-                """
-        state_score = np.zeros(len(self.states), dtype=int)
-        sequence_len = len(sequence)
-        for s in range(len(self.states)):
-            list = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
-                    for i in self.templates[0][template_index]]
-            list.insert(0, self.states[s])
-            state_score[s] = self.u_lambda[template_index].get(tuple(list), 0)
+    def get_score(self, sequence, index):
+        states_len = len(self.states)
+
+        # unigram
+        u_score = np.zeros(states_len, dtype=int)
+        for tmpl_index in range(len(self.templates[0])):
+            u_score += self.get_score_tmp(sequence, index, 0, tmpl_index)
+
+        # bigram
+        b_score = np.zeros((states_len, states_len), dtype=int)  # (上一个状态，当前状态)
+        for tmpl_index in range(len(self.templates[1])):
+            for si in range(states_len):
+                b_score[si] += self.get_score_tmp(sequence, index, 1, tmpl_index, self.states[si])
+
+        # unigram + bigram
+        state_score = u_score + b_score
         return state_score
 
-    def b_score(self, sequence, index, template_index, last_tag):
-        """
-                :param sequence: 观察序列
-                :param index: 当前字符在观察序列中的下标
-                :param template_index: 当前用的模板下标
-                :return: 按 self.states 的顺序返回每一种状态的分数
-                """
-        state_score = np.zeros(len(self.states), dtype=int)
-        sequence_len = len(sequence)
-        for s in range(len(self.states)):
-            list = [last_tag, self.states[s]]
-            tmp = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
-                    for i in self.templates[1][template_index]]
-            list.extend(tmp)
-            state_score[s] = self.b_mu[template_index].get(tuple(list), 0)
-        return state_score
-
-    def u_score_t(self, sequence, index, template_index):
+    def get_score_tmp(self, sequence, index, ub, template_index, last_tag=None):
         """
         :param sequence: 观察序列
         :param index: 当前字符在观察序列中的下标
@@ -188,32 +171,21 @@ class CRFModel(object):
         :return: 按 self.states 的顺序返回每一种状态的分数
         """
         state_score = np.zeros(len(self.states), dtype=int)
-        sequence_len = len(sequence)
-        for s in range(len(self.states)):
-            list = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
-                    for i in self.templates[0][template_index]]
-            list.insert(0, self.states[s])
-            state_score[s] = self.u_lambda[template_index].get(tuple(list), 0)
+        for sj in range(len(self.states)):
+            states = [self.states[sj]]
+            if ub == 1:
+                states.insert(0, last_tag)
+            key = self.get_key(states, sequence, index, self.templates[ub][template_index])
+            state_score[sj] = self.alpha[ub][template_index].get(key, 0)
         return state_score
 
-    def b_score_t(self, sequence, index, template_index):
-        """
-        :param sequence: 观察序列
-        :param index: 当前字符在观察序列中的下标
-        :param template_index: 当前用的模板下标
-        :return: 返回 [si-1, si] 的分数
-        """
+    def get_key(self, states, sequence, index, template):
+        list = states.copy()
         sequence_len = len(sequence)
-        states_len = len(self.states)
-        state_score = np.zeros((states_len, states_len), dtype=int)
-        for si in range(len(self.states)):
-            for sj in range(len(self.states)):
-                list = [self.states[si], self.states[sj]]
-                list.extend([sequence[index + i] if (index + i) in range(0, sequence_len) else None
-                             for i in self.templates[1][template_index]])
-
-                state_score[si][sj] = self.b_mu[template_index].get(tuple(list), 0)
-        return state_score
+        tmp = [sequence[index + i] if (index + i) in range(0, sequence_len) else None
+               for i in template]
+        list.extend(tmp)
+        return tuple(list)
 
 
 if __name__ == '__main__':
