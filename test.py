@@ -1,8 +1,28 @@
 import numpy as np
 import json as json
+from collections import Counter
+import pickle
+
+def avg_alpha( alphas, T):
+    sum = Counter(alphas[0])
+    for i in range(1, T, 1):
+        sum += Counter(alphas[i])
+    sum_dict = dict(sum)
+    for key in sum_dict:
+        sum_dict[key] = sum_dict[key]/2
+    return sum_dict
 
 if __name__ == '__main__':
-    friends = {"name": "王虎", "name1": "张二", "name2": "姚晨"}
+    a_dict = {('S', '中'): 111, 2: [23, 1, 4], '23': {1: 2, 'd': 'sad'}}
+    file = open('pickle_example.pickle', 'wb')
+    pickle.dump(a_dict, file)
+
+    with open('pickle_example.pickle', 'rb') as file:
+        a_dict1 = pickle.load(file)
+
+    print(a_dict1)
+
+    friends = [{"name": "王虎", "name1": "张二", "name2": "姚晨"}, {}]
     print(json.dumps(friends, ensure_ascii=False, indent=3))
     json.dump(friends, open(r'./test.json', 'w'), ensure_ascii=False, indent=3)
     friend = json.load(open(r'./test.json'))
@@ -44,6 +64,18 @@ if __name__ == '__main__':
 
     score = np.arange(4)
     state_score = np.arange(16).reshape(4, -1)
-    state_score +=  score.reshape(1, -1).T
+    state_score += score.reshape(1, -1).T
     print(state_score)
-    print(np.max(state_score[:,1]), np.argmax(state_score[:,1]))
+    print(np.max(state_score[:, 1]), np.argmax(state_score[:, 1]))
+
+    x = {'a': 1, 'b': 2, 'c': 3}
+    y = {'c': 4, 'd': 5}
+    z = avg_alpha([x,y], 2)
+    print(z)
+    # X, Y = Counter(x), Counter(y)
+    # z = dict(X + Y)
+    # print(z)
+    # for key in z:
+    #     z[key] = z[key] / 2
+    # print(z)
+
