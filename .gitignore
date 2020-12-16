@@ -2,5 +2,7 @@
 __pycache__/
 venv/
 DATASET/
-record/
+PART1/record/
+PART2/record/
+CRF/record/
 *.npy
