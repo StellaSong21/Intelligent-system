@@ -21,11 +21,9 @@ class CRFModel(object):
         self.states = ['B', 'I', 'E', 'S']
         self.charset, self.sequences, self.tags = dutil.get_train_set(datapaths)
         self.templates = tutil.get_templates(tempaths)
+        self.alphas = []
         self.alpha = [[dict() for i in range(len(self.templates[0]))], [dict() for i in range(len(self.templates[1]))]]
-        # print(self.alpha)
-        self.train(50, self.sequences[0], self.tags[0], self.sequences[1], self.tags[1])
-        # state_tmp = self.viterbi(self.sequences[1])
-        # print(state_tmp)
+        self.train(100, self.sequences[0], self.tags[0], self.sequences[1], self.tags[1])
         pass
 
     # T: 训练次数
@@ -37,27 +35,20 @@ class CRFModel(object):
         #######################################################
 
         for i in range(T):
-            print(i)
-
-            ####################### 测试部分 #######################
-            test_states = self.viterbi(test_sequence)
-            # print(test_states)
-            correct = 0
-            for j in range(len(test_sequence)):
-                if test_tags[j] == test_states[j]:
-                    correct += 1
-            test_loss[i] = 1.0 * correct / len(test_sequence)
-            print(test_loss[i])
-            #######################################################
-
             start = time.time()
             states = self.viterbi(sequence)
-            mid = time.time()
-            print(i, ", viterbi time: ", mid - start)
             self.update(sequence, states, tags)
             end = time.time()
-            print(i, ", update time: ", end - mid)
             print(i, ", time: ", end - start)
+
+            ####################### 测试部分 #######################
+            start = time.time()
+            test_states = self.viterbi(test_sequence)
+            test_loss[i] = precision(test_states, test_tags)
+            end = time.time()
+            print(i, ", time: ", end - start)
+            print(test_loss[i])
+            #######################################################
 
         ####################### 测试部分 #######################
         # 创建画板
@@ -122,9 +113,6 @@ class CRFModel(object):
         for tmpl_index in range(btmpl_len):
             score[0] += self.get_score_tmp(sequence, 0, 1, tmpl_index, None)
 
-        # print('score[0]:', score[0])
-        # time.sleep(1)
-
         # 2. 递推
         for index in range(1, sequence_len, 1):
             state_score = self.get_score(sequence, index)
@@ -186,6 +174,28 @@ class CRFModel(object):
                for i in template]
         list.extend(tmp)
         return tuple(list)
+
+
+def precision(output, target):
+    total = 0
+    correct = 0
+    i = 0
+    while i < len(output):
+        if output[i] == 'S':
+            total += 1
+            correct += 1 if target[i] == 'S' else 0
+        elif output[i] == 'B':
+            j = i
+            i += 1
+            while i < len(output) and output[i] == 'I':
+                i += 1
+            if i < len(output) and output[i] == 'E':
+                total += 1
+                correct += 1 if target[j:i + 1] == output[j:i + 1] else 0
+            else:
+                i -= 1
+        i += 1
+    return 1.0 * correct / total if total > 0 else 0.0
 
 
 if __name__ == '__main__':
