@@ -5,4 +5,6 @@ DATASET/
 PART1/record/
 PART2/record/
 CRF/record/
+BiLSTM_CRF/record
+HMM/record
 *.npy

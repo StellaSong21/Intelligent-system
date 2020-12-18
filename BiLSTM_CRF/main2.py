@@ -39,6 +39,12 @@ class BiLSTM_CRF(nn.Module):
 
     def __init__(self, vocab_size, tag_to_ix, embedding_dim, hidden_dim):
         super(BiLSTM_CRF, self).__init__()
+
+        print('vocab_size=', vocab_size)
+        print('tag_to_ix=', tag_to_ix)
+        print('embedding_dim=', embedding_dim)
+        print('hidden_dim=', hidden_dim)
+
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.vocab_size = vocab_size
@@ -95,8 +101,7 @@ class BiLSTM_CRF(nn.Module):
             for next_tag in range(self.tagset_size):
                 # broadcast the emission score: it is the same regardless of
                 # the previous tag
-                emit_score = feat[next_tag].view(
-                    1, -1).expand(1, self.tagset_size)
+                emit_score = feat[next_tag].view(1, -1).expand(1, self.tagset_size)
                 # the ith entry of trans_score is the score of transitioning to
                 # next_tag from i
                 trans_score = self.transitions[next_tag].view(1, -1)
@@ -120,6 +125,7 @@ class BiLSTM_CRF(nn.Module):
         return lstm_feats
 
     def _score_sentence(self, feats, tags):
+        print('feats:', feats.shape)
         # Gives the score of a provided tag sequence
         score = torch.zeros(1)
         tags = torch.cat([torch.tensor([self.tag_to_ix[START_TAG]], dtype=torch.long), tags])
@@ -212,7 +218,7 @@ for sentence, tags in training_data:
         if word not in word_to_ix:
             word_to_ix[word] = len(word_to_ix)
 
-tag_to_ix = {'B': 0, 'I': 1, 'E': 2, 'S': 3, START_TAG: 4, STOP_TAG: 5}
+tag_to_ix = {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
 
 model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, EMBEDDING_DIM, HIDDEN_DIM)
 optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
@@ -224,7 +230,8 @@ with torch.no_grad():
     print(model(precheck_sent))
 
 # Make sure prepare_sequence from earlier in the LSTM section is loaded
-for epoch in range(100):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(
+        300):  # again, normally you would NOT do 300 epochs, it is toy data
     for sentence, tags in training_data:
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
