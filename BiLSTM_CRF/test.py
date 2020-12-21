@@ -1,8 +1,12 @@
 import torch
-import torch.autograd as autograd
 import torch.nn as nn
 import torch.optim as optim
 import time
+from BiLSTM_CRF.util import DataUtil as dutil
+import os
+import numpy as np
+import pickle
+import matplotlib.pyplot as plt
 
 torch.manual_seed(1)
 
@@ -95,8 +99,7 @@ class BiLSTM_CRF(nn.Module):
             for next_tag in range(self.tagset_size):
                 # broadcast the emission score: it is the same regardless of
                 # the previous tag
-                emit_score = feat[next_tag].view(
-                    1, -1).expand(1, self.tagset_size)
+                emit_score = feat[next_tag].view(1, -1).expand(1, self.tagset_size)
                 # the ith entry of trans_score is the score of transitioning to
                 # next_tag from i
                 trans_score = self.transitions[next_tag].view(1, -1)
@@ -191,60 +194,149 @@ class BiLSTM_CRF(nn.Module):
 #####################################################################
 # Run training
 
+def precision(tag_to_ix, output, target):
+    total = 0
+    correct = 0
+    i = 0
+    while i < len(output):
+        if output[i] == tag_to_ix['S']:
+            total += 1
+            correct += 1 if target[i] == tag_to_ix['S'] else 0
+        elif output[i] == tag_to_ix['B']:
+            j = i
+            i += 1
+            while i < len(output) and output[i] == tag_to_ix['I']:
+                i += 1
+            if i < len(output) and output[i] == tag_to_ix['E']:
+                total += 1
+                correct += 1 if target[j:i + 1] == output[j:i + 1] else 0
+            else:
+                i -= 1
+        i += 1
+    return correct, total
+
 
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
-EMBEDDING_DIM = 5
-HIDDEN_DIM = 4
+# TODO
+EMBEDDING_DIMs = [50]  # [24, 32, 50]
+HIDDEN_DIMs = [32]  # [24, 32, 50]
 
-# Make up some training data
-training_data = [(
-    "the wall street journal reported today that apple corporation made money".split(),
-    "B I I I O O O B I O O".split()
-), (
-    "georgia tech is a university in georgia".split(),
-    "B I O O O O B".split()
-)]
+if __name__ == '__main__':
+    # TODO
+    word_to_ix, data = dutil.stat_charset(['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8'])
+    # TODO
+    # size = len(data) // 20
+    # train_set = data[:int(size * 0.9)]
+    # test_set = data[int(size * 0.9):]
+    train_set = data[:int(len(data) * 0.95)]
+    test_set = data[int(len(data) * 0.95):]
 
-word_to_ix = {}
-for sentence, tags in training_data:
-    for word in sentence:
-        if word not in word_to_ix:
-            word_to_ix[word] = len(word_to_ix)
+    print(len(train_set))
+    # TODO
+    T = 50
 
-tag_to_ix = {'B': 0, 'I': 1, 'E': 2, 'S': 3, START_TAG: 4, STOP_TAG: 5}
+    tag_to_ix = {'B': 0, 'I': 1, 'E': 2, 'S': 3, START_TAG: 4, STOP_TAG: 5}
+    models = []
+    optimizers = []
+    save_paths = []
 
-model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, EMBEDDING_DIM, HIDDEN_DIM)
-optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
+    for EMBEDDING_DIM in EMBEDDING_DIMs:
+        for HIDDEN_DIM in HIDDEN_DIMs:
+            model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, EMBEDDING_DIM, HIDDEN_DIM)
+            optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
+            models.append(model)
+            optimizers.append(optimizer)
+            # TODO
+            path = os.path.join('./final',
+                                'e' + str(EMBEDDING_DIM)
+                                + 'h' + str(HIDDEN_DIM))
+            if not os.path.isdir(path):
+                os.makedirs(path)
+            save_paths.append(path)
 
-# Check predictions before training
-with torch.no_grad():
-    precheck_sent = prepare_sequence(training_data[0][0], word_to_ix)
-    precheck_tags = torch.tensor([tag_to_ix[t] for t in training_data[0][1]], dtype=torch.long)
-    print(model(precheck_sent))
+    accuracys = np.zeros((len(models), T), dtype=float)
 
-# Make sure prepare_sequence from earlier in the LSTM section is loaded
-for epoch in range(100):  # again, normally you would NOT do 300 epochs, it is toy data
-    for sentence, tags in training_data:
-        # Step 1. Remember that Pytorch accumulates gradients.
-        # We need to clear them out before each instance
-        model.zero_grad()
+    for m in range(len(models)):
+        model = models[m]
+        optimizer = optimizers[m]
+        # Check predictions before training
+        # with torch.no_grad():
+        #     precheck_sent = prepare_sequence(test_set[0][0], word_to_ix)
+        #     precheck_tags = torch.tensor([tag_to_ix[t] for t in test_set[0][1]], dtype=torch.long)
+        #     print(model(precheck_sent))
 
-        # Step 2. Get our inputs ready for the network, that is,
-        # turn them into Tensors of word indices.
-        sentence_in = prepare_sequence(sentence, word_to_ix)
-        targets = torch.tensor([tag_to_ix[t] for t in tags], dtype=torch.long)
+        # Make sure prepare_sequence from earlier in the LSTM section is loaded
+        for epoch in range(T):  # again, normally you would NOT do 300 epochs, it is toy data
+            start = time.time()
+            for sentence, tags in train_set:
+                # Step 1. Remember that Pytorch accumulates gradients.
+                # We need to clear them out before each instance
+                model.zero_grad()
 
-        # Step 3. Run our forward pass.
-        loss = model.neg_log_likelihood(sentence_in, targets)
+                # Step 2. Get our inputs ready for the network, that is,
+                # turn them into Tensors of word indices.
+                sentence_in = prepare_sequence(sentence, word_to_ix)
+                targets = torch.tensor([tag_to_ix[t] for t in tags], dtype=torch.long)
 
-        # Step 4. Compute the loss, gradients, and update the parameters by
-        # calling optimizer.step()
-        loss.backward()
-        optimizer.step()
+                # Step 3. Run our forward pass.
+                loss = model.neg_log_likelihood(sentence_in, targets)
 
-# Check predictions after training
-with torch.no_grad():
-    precheck_sent = prepare_sequence(training_data[0][0], word_to_ix)
-    print(model(precheck_sent))
-# We got it!
+                # Step 4. Compute the loss, gradients, and update the parameters by
+                # calling optimizer.step()
+                loss.backward()
+                optimizer.step()
+
+            ###################### 保存模型 ########################
+            # TODO
+            save_path = os.path.join(save_paths[m], str(epoch + 1) + '.pt')
+            torch.save(model.state_dict(), save_path)
+            model.load_state_dict(torch.load(save_path))
+            model.eval()
+            #######################################################
+
+            ###################### 测试部分 ########################
+            correct = np.zeros(len(test_set), dtype=int)
+            total = np.zeros(len(test_set), dtype=int)
+            for t in range(len(test_set)):
+                sentence = test_set[t][0]
+                # tags = torch.tensor([tag_to_ix[i] for i in test_set[t][1]], dtype=torch.long)
+                tags = [tag_to_ix[i] for i in test_set[t][1]]
+                precheck_sent = prepare_sequence(sentence, word_to_ix)
+                output = model(precheck_sent)
+                correct[t], total[t] = precision(tag_to_ix, output[1], tags)
+            accuracy = 1.0 * np.sum(correct) / np.sum(total) if np.sum(total) != 0 else 0.0
+            accuracys[m][epoch] = accuracy
+            #######################################################
+
+            end = time.time()
+            print(epoch + 1, ', time:', (end - start), ', accuracy:', accuracy)
+
+        # Check predictions after training
+        # with torch.no_grad():
+        #     precheck_sent = prepare_sequence(test_set[0][0], word_to_ix)
+        #     print(model(precheck_sent))
+        # We got it!
+
+    print(accuracys)
+    # TODO
+    pickle.dump(accuracys, open('./final/accuracy.pickle', 'wb'))
+    accuracys = pickle.load(open('./final/accuracy.pickle', 'rb'))
+
+    ####################### 测试部分 #######################
+    # 创建画板
+    fig = plt.figure()
+
+    # 创建画纸
+    ax1 = fig.add_subplot(1, 1, 1)
+
+    # test result
+    ax1.set_title('Accuracy/Epoch')
+    ax1.set_xlabel('epoch')
+    ax1.set_ylabel('accuracy')
+    for m in range(len(accuracys)):
+        ax1.plot(range(1, T + 1, 1), accuracys[m], '-',
+                 label=os.path.splitext(os.path.basename(save_paths[m]))[0])
+    plt.legend()
+    plt.show()
+    #######################################################

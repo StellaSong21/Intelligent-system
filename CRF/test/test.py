@@ -17,12 +17,13 @@ import os
 
 
 class CRFModel(object):
-    def __init__(self, datapaths, test_tempaths, T=100, train=0.9):
+    def __init__(self, datapaths, test_tempaths, T=100, train=1):
         super(CRFModel, self).__init__()
         self.states = ['B', 'I', 'E', 'S']
         self.charset, self.sequences, self.tagss = dutil.get_train_set(datapaths)
         self.templatess = tutil.test_get_templates(test_tempaths)
         self.accuracy = np.zeros((len(self.templatess), 2, T), dtype=float)
+
         for t in range(len(self.templatess)):
             templates = self.templatess[t]
             self.alphas = []
@@ -36,17 +37,20 @@ class CRFModel(object):
                 tags_len = len(tags)
                 train_set.append(sequence[0:int(sequence_len * train)])
                 test_set.append(sequence[int(sequence_len * train):])
+                print(len(test_set))
                 train_tags.append(tags[0:int(tags_len * train)])
                 test_tags.append(tags[int(tags_len * train):])
             dirname = os.path.splitext(os.path.basename(test_tempaths[t]))[0]
+            # TODO
             save_path = [os.path.join('../record', dirname, 'normal'), os.path.join('../record', dirname, 'average')]
             for path in save_path:
                 if not os.path.exists(path):
                     os.makedirs(path)
             self.train(T, train_set, train_tags, t, templates, save_path, test_set, test_tags)
         print(self.accuracy)
-
+        # TODO
         pickle.dump(self.accuracy, open('../record/accuracy.pickle', 'wb'))
+
         self.accuracy = pickle.load(open('../record/accuracy.pickle', 'rb'))
 
         ####################### 测试部分 #######################
@@ -64,7 +68,7 @@ class CRFModel(object):
             for a in range(2):
                 ax1.plot(range(1, T + 1, 1), self.accuracy[t][a], '-',
                          label=os.path.splitext(os.path.basename(test_tempaths[t]))[0]
-                               + '/' + 'normal' if a == 1 else 'average')
+                               + '/' + ('normal' if a == 0 else 'average'))
         plt.legend()
         plt.show()
         #######################################################
@@ -79,7 +83,7 @@ class CRFModel(object):
             self.alphas.append(self.alpha)
             alphas = [self.alpha, self.avg_alpha(self.alphas, i + 1, templates)]
 
-            # TODO 保存 alpha 和 avg_alpha
+            # TODO
             pickle.dump(alphas[0], open(os.path.join(save_path[0], str(i + 1) + '.pickle'), 'wb'))
             pickle.dump(alphas[1], open(os.path.join(save_path[1], str(i + 1) + '.pickle'), 'wb'))
             alphas[0] = pickle.load(open(os.path.join(save_path[0], str(i + 1) + '.pickle'), 'rb'))
@@ -252,6 +256,7 @@ def precision(output, target):
 
 
 if __name__ == '__main__':
+    # TODO
     crf = CRFModel(['../../DATASET/dataset1/train.utf8', '../../DATASET/dataset2/train.utf8'],
                    ['../../DATASET/templates/template1.utf8', '../../DATASET/templates/template2.utf8',
                     '../../DATASET/templates/template3.utf8', '../../DATASET/templates/template4.utf8',

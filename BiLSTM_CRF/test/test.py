@@ -218,10 +218,12 @@ def precision(tag_to_ix, output, target):
 
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
-EMBEDDING_DIMs = [6, 24, 32, 50, 64]
-HIDDEN_DIMs = [32]
+# TODO
+EMBEDDING_DIMs = [24, 32, 50]
+HIDDEN_DIMs = [24, 32, 50]
 
 if __name__ == '__main__':
+    # TODO
     word_to_ix, data = dutil.stat_charset(['../../DATASET/dataset1/train.utf8', '../../DATASET/dataset2/train.utf8'])
 
     size = len(data) // 20
@@ -230,7 +232,8 @@ if __name__ == '__main__':
     test_set = data[int(size * 0.9):size]
 
     print(size, len(train_set), len(test_set))
-    T = 100
+    # TODO
+    T = 50
 
     tag_to_ix = {'B': 0, 'I': 1, 'E': 2, 'S': 3, START_TAG: 4, STOP_TAG: 5}
     models = []
@@ -283,6 +286,7 @@ if __name__ == '__main__':
                 optimizer.step()
 
             ###################### 保存模型 ########################
+            # TODO
             save_path = os.path.join(save_paths[m], str(epoch + 1) + '.pt')
             torch.save(model.state_dict(), save_path)
             model.load_state_dict(torch.load(save_path))
@@ -313,6 +317,7 @@ if __name__ == '__main__':
         # We got it!
 
     print(accuracys)
+    # TODO
     pickle.dump(accuracys, open('../record/accuracy.pickle', 'wb'))
     accuracys = pickle.load(open('../record/accuracy.pickle', 'rb'))
 
@@ -328,9 +333,8 @@ if __name__ == '__main__':
     ax1.set_xlabel('epoch')
     ax1.set_ylabel('accuracy')
     for m in range(len(accuracys)):
-        for t in range(T):
-            ax1.plot(range(1, T + 1, 1), accuracys[m], '-',
-                     label=os.path.splitext(os.path.basename(save_paths[m]))[0])
+        ax1.plot(range(1, T + 1, 1), accuracys[m], '-',
+                 label=os.path.splitext(os.path.basename(save_paths[m]))[0])
     plt.legend()
     plt.show()
     #######################################################
