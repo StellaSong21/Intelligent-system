@@ -1,5 +1,5 @@
-from CRF.util import DataUtil as dutil
-from CRF.util import TemplateUtil as tutil
+from util import DataUtil as dutil
+from util import TemplateUtil as tutil
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -7,20 +7,12 @@ from collections import Counter
 import pickle
 import os
 
-'''
-3. 训练的中止条件，如何防止过拟合？
-4. 如何处理未出现的字符？
-5. 取平均参数值
-6. 比较不同模板
-7. 分析数据
-'''
-
 
 class CRFModel(object):
     def __init__(self, datapaths, test_tempaths, T=100, train=1):
         super(CRFModel, self).__init__()
         self.states = ['B', 'I', 'E', 'S']
-        self.charset, self.sequences, self.tagss = dutil.get_train_set(datapaths)
+        self.charset, self.sequences, self.tagss = dutil.CRF_get_train_set(datapaths)
         self.templatess = tutil.test_get_templates(test_tempaths)
         self.accuracy = np.zeros((len(self.templatess), 2, T), dtype=float)
 
@@ -42,16 +34,16 @@ class CRFModel(object):
                 test_tags.append(tags[int(tags_len * train):])
             dirname = os.path.splitext(os.path.basename(test_tempaths[t]))[0]
             # TODO
-            save_path = [os.path.join('../record', dirname, 'normal'), os.path.join('../record', dirname, 'average')]
+            save_path = [os.path.join('record', dirname, 'normal'), os.path.join('record', dirname, 'average')]
             for path in save_path:
                 if not os.path.exists(path):
                     os.makedirs(path)
             self.train(T, train_set, train_tags, t, templates, save_path, test_set, test_tags)
         print(self.accuracy)
         # TODO
-        pickle.dump(self.accuracy, open('../record/accuracy.pickle', 'wb'))
+        pickle.dump(self.accuracy, open('record/accuracy.pickle', 'wb'))
 
-        self.accuracy = pickle.load(open('../record/accuracy.pickle', 'rb'))
+        self.accuracy = pickle.load(open('record/accuracy.pickle', 'rb'))
 
         ####################### 测试部分 #######################
         # 创建画板
@@ -257,8 +249,8 @@ def precision(output, target):
 
 if __name__ == '__main__':
     # TODO
-    crf = CRFModel(['../../DATASET/dataset1/train.utf8', '../../DATASET/dataset2/train.utf8'],
-                   ['../../DATASET/templates/template1.utf8', '../../DATASET/templates/template2.utf8',
-                    '../../DATASET/templates/template3.utf8', '../../DATASET/templates/template4.utf8',
-                    '../../DATASET/templates/template5.utf8'],
+    crf = CRFModel(['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8'],
+                   ['../DATASET/templates/template1.utf8', '../DATASET/templates/template2.utf8',
+                    '../DATASET/templates/template3.utf8', '../DATASET/templates/template4.utf8',
+                    '../DATASET/templates/template5.utf8'],
                    T=100)

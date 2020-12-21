@@ -36,16 +36,32 @@ class Solution:
     # HMM 模型的预测接口
     # --------------------
     def hmm_predict(self, sentences: List[str]) -> List[str]:
-        pass
+        from HMM import HMM
+        results = []
+        hmm = HMM.HMMModel(['./DATASET/dataset1/train.utf8', './DATASET/dataset2/train.utf8'])
+        for sent in sentences:
+            results.append(''.join(hmm.viterbi(sent)))
+        return results
 
     # --------------------
     # CRF 模型的预测接口
     # --------------------
     def crf_predict(self, sentences: List[str]) -> List[str]:
-        pass
+        from CRF import CRF
+        results = []
+        crf = CRF.CRFModel('./CRF/record/template4/normal/67.pickle', ['./DATASET/templates/template4.utf8'])
+        for sent in sentences:
+            results.append(''.join(crf.viterbi(sent)))
+        return results
 
     # --------------------
     # DNN 模型的预测接口
     # --------------------
     def dnn_predict(self, sentences: List[str]) -> List[str]:
-        pass
+        from BiLSTM_CRF import BiLSTM_CRF
+        from util import DataUtil as dutil
+        word_to_ix, _ = dutil.BiLSTM_stat(['./DATASET/dataset1/train.utf8', './DATASET/dataset2/train.utf8'])
+        results = []
+        for sent in sentences:
+            results.append(''.join(BiLSTM_CRF.viterbi(word_to_ix, './BiLSTM_CRF/final/e50h32/10.pt', sent)))
+        return results

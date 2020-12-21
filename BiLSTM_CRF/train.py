@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import time
-from BiLSTM_CRF.util import DataUtil0 as dutil
+from util import DataUtil as dutil
 import os
 import numpy as np
 import pickle
@@ -219,20 +219,19 @@ def precision(tag_to_ix, output, target):
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
 # TODO
-EMBEDDING_DIMs = [50]  # [24, 32, 50]
-HIDDEN_DIMs = [32]  # [24, 32, 50]
+EMBEDDING_DIMs = [24, 32, 50]
+HIDDEN_DIMs = [24, 32, 50]
 
 if __name__ == '__main__':
     # TODO
-    word_to_ix, data = dutil.stat_charset(['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8'])
-    # TODO
-    # size = len(data) // 20
-    # train_set = data[:int(size * 0.9)]
-    # test_set = data[int(size * 0.9):]
-    train_set = data[:int(len(data) * 0.95)]
-    test_set = data[int(len(data) * 0.95):]
+    word_to_ix, data = dutil.BiLSTM_stat(['../DATASET/dataset1/train.utf8', '../DATASET/dataset2/train.utf8'])
 
-    print(len(train_set))
+    size = len(data) // 20
+
+    train_set = data[:int(size * 0.9)]
+    test_set = data[int(size * 0.9):size]
+
+    print(size, len(train_set), len(test_set))
     # TODO
     T = 50
 
@@ -247,14 +246,15 @@ if __name__ == '__main__':
             optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
             models.append(model)
             optimizers.append(optimizer)
-            # TODO
-            path = os.path.join('./final',
+            path = os.path.join('record',
                                 'e' + str(EMBEDDING_DIM)
                                 + 'h' + str(HIDDEN_DIM))
+            """
             if not os.path.isdir(path):
                 os.makedirs(path)
+            """
             save_paths.append(path)
-
+    """
     accuracys = np.zeros((len(models), T), dtype=float)
 
     for m in range(len(models)):
@@ -320,8 +320,9 @@ if __name__ == '__main__':
 
     print(accuracys)
     # TODO
-    pickle.dump(accuracys, open('./final/accuracy.pickle', 'wb'))
-    accuracys = pickle.load(open('./final/accuracy.pickle', 'rb'))
+    pickle.dump(accuracys, open('record/accuracy.pickle', 'wb'))
+    """
+    accuracys = pickle.load(open('record/accuracy.pickle', 'rb'))
 
     ####################### 测试部分 #######################
     # 创建画板

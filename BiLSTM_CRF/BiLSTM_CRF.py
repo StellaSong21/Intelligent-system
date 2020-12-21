@@ -1,12 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import time
-from BiLSTM_CRF.util import DataUtil as dutil
-import os
-import numpy as np
-import pickle
-import matplotlib.pyplot as plt
 
 torch.manual_seed(1)
 
@@ -23,7 +16,8 @@ def argmax(vec):
 
 # 得到 sequence 的索引表示
 def prepare_sequence(seq, to_ix):
-    idxs = [to_ix[w] for w in seq]
+    # TODO
+    idxs = [(to_ix[w] if w in to_ix else 0) for w in seq]
     return torch.tensor(idxs, dtype=torch.long)
 
 
@@ -56,14 +50,6 @@ class BiLSTM_CRF(nn.Module):
 
         self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2,  # 取整除 - 返回商的整数部分（向下取整）
                             num_layers=1, bidirectional=True)
-        '''
-        input_size ：输入的维度
-        hidden_size：h的维度
-        num_layers：堆叠LSTM的层数，默认值为1
-        bias：偏置 ，默认值：True
-        batch_first： 如果是True，则input为(batch, seq, input_size)。默认值为：False（seq_len, batch, input_size）
-        bidirectional ：是否双向传播，默认值为False
-        '''
 
         # Maps the output of the LSTM into tag space.
         self.hidden2tag = nn.Linear(hidden_dim, self.tagset_size)
@@ -191,150 +177,19 @@ class BiLSTM_CRF(nn.Module):
         return score, tag_seq
 
 
-#####################################################################
-# Run training
-
-def precision(tag_to_ix, output, target):
-    total = 0
-    correct = 0
-    i = 0
-    while i < len(output):
-        if output[i] == tag_to_ix['S']:
-            total += 1
-            correct += 1 if target[i] == tag_to_ix['S'] else 0
-        elif output[i] == tag_to_ix['B']:
-            j = i
-            i += 1
-            while i < len(output) and output[i] == tag_to_ix['I']:
-                i += 1
-            if i < len(output) and output[i] == tag_to_ix['E']:
-                total += 1
-                correct += 1 if target[j:i + 1] == output[j:i + 1] else 0
-            else:
-                i -= 1
-        i += 1
-    return correct, total
-
-
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
-# TODO
-EMBEDDING_DIMs = [24, 32, 50]
-HIDDEN_DIMs = [24, 32, 50]
+EMBEDDING_DIM = 50
+HIDDEN_DIM = 32
 
-if __name__ == '__main__':
-    # TODO
-    word_to_ix, data = dutil.stat_charset(['../../DATASET/dataset1/train.utf8', '../../DATASET/dataset2/train.utf8'])
 
-    size = len(data) // 20
-
-    train_set = data[:int(size * 0.9)]
-    test_set = data[int(size * 0.9):size]
-
-    print(size, len(train_set), len(test_set))
-    # TODO
-    T = 50
-
+def viterbi(word_to_ix, path, sentence):
     tag_to_ix = {'B': 0, 'I': 1, 'E': 2, 'S': 3, START_TAG: 4, STOP_TAG: 5}
-    models = []
-    optimizers = []
-    save_paths = []
-
-    for EMBEDDING_DIM in EMBEDDING_DIMs:
-        for HIDDEN_DIM in HIDDEN_DIMs:
-            model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, EMBEDDING_DIM, HIDDEN_DIM)
-            optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
-            models.append(model)
-            optimizers.append(optimizer)
-            path = os.path.join('../record',
-                                'e' + str(EMBEDDING_DIM)
-                                + 'h' + str(HIDDEN_DIM))
-            if not os.path.isdir(path):
-                os.makedirs(path)
-            save_paths.append(path)
-
-    accuracys = np.zeros((len(models), T), dtype=float)
-
-    for m in range(len(models)):
-        model = models[m]
-        optimizer = optimizers[m]
-        # Check predictions before training
-        # with torch.no_grad():
-        #     precheck_sent = prepare_sequence(test_set[0][0], word_to_ix)
-        #     precheck_tags = torch.tensor([tag_to_ix[t] for t in test_set[0][1]], dtype=torch.long)
-        #     print(model(precheck_sent))
-
-        # Make sure prepare_sequence from earlier in the LSTM section is loaded
-        for epoch in range(T):  # again, normally you would NOT do 300 epochs, it is toy data
-            start = time.time()
-            for sentence, tags in train_set:
-                # Step 1. Remember that Pytorch accumulates gradients.
-                # We need to clear them out before each instance
-                model.zero_grad()
-
-                # Step 2. Get our inputs ready for the network, that is,
-                # turn them into Tensors of word indices.
-                sentence_in = prepare_sequence(sentence, word_to_ix)
-                targets = torch.tensor([tag_to_ix[t] for t in tags], dtype=torch.long)
-
-                # Step 3. Run our forward pass.
-                loss = model.neg_log_likelihood(sentence_in, targets)
-
-                # Step 4. Compute the loss, gradients, and update the parameters by
-                # calling optimizer.step()
-                loss.backward()
-                optimizer.step()
-
-            ###################### 保存模型 ########################
-            # TODO
-            save_path = os.path.join(save_paths[m], str(epoch + 1) + '.pt')
-            torch.save(model.state_dict(), save_path)
-            model.load_state_dict(torch.load(save_path))
-            model.eval()
-            #######################################################
-
-            ###################### 测试部分 ########################
-            correct = np.zeros(len(test_set), dtype=int)
-            total = np.zeros(len(test_set), dtype=int)
-            for t in range(len(test_set)):
-                sentence = test_set[t][0]
-                # tags = torch.tensor([tag_to_ix[i] for i in test_set[t][1]], dtype=torch.long)
-                tags = [tag_to_ix[i] for i in test_set[t][1]]
-                precheck_sent = prepare_sequence(sentence, word_to_ix)
-                output = model(precheck_sent)
-                correct[t], total[t] = precision(tag_to_ix, output[1], tags)
-            accuracy = 1.0 * np.sum(correct) / np.sum(total) if np.sum(total) != 0 else 0.0
-            accuracys[m][epoch] = accuracy
-            #######################################################
-
-            end = time.time()
-            print(epoch + 1, ', time:', (end - start), ', accuracy:', accuracy)
-
-        # Check predictions after training
-        # with torch.no_grad():
-        #     precheck_sent = prepare_sequence(test_set[0][0], word_to_ix)
-        #     print(model(precheck_sent))
-        # We got it!
-
-    print(accuracys)
-    # TODO
-    pickle.dump(accuracys, open('../record/accuracy.pickle', 'wb'))
-    accuracys = pickle.load(open('../record/accuracy.pickle', 'rb'))
-
-    ####################### 测试部分 #######################
-    # 创建画板
-    fig = plt.figure()
-
-    # 创建画纸
-    ax1 = fig.add_subplot(1, 1, 1)
-
-    # test result
-    ax1.set_title('Accuracy/Epoch')
-    ax1.set_xlabel('epoch')
-    ax1.set_ylabel('accuracy')
-    for m in range(len(accuracys)):
-        ax1.plot(range(1, T + 1, 1), accuracys[m], '-',
-                 label=os.path.splitext(os.path.basename(save_paths[m]))[0])
-    plt.legend()
-    plt.show()
-    #######################################################
+    ix_to_tag = {0: 'B', 1: 'I', 2: 'E', 3: 'S', 4: START_TAG, 5: STOP_TAG}
+    model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, EMBEDDING_DIM, HIDDEN_DIM)
+    model.load_state_dict(torch.load(path))
+    model.eval()
+    precheck_sent = prepare_sequence(sentence, word_to_ix)
+    output = model(precheck_sent)
+    output = [ix_to_tag[i] for i in output[1]]
+    return output

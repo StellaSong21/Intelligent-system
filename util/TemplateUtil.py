@@ -1,7 +1,6 @@
 import re
 
 
-
 def get_templates(filepaths, encoding='utf8'):
     templates = [[], []]
     for filepath in filepaths:
@@ -39,13 +38,6 @@ def str2template(string):
     # return templates
 
 
-if __name__ == '__main__':
-    templates = get_templates(['../../DATASET/dataset1/template0.utf8', '../../DATASET/dataset2/template0.utf8'])
-    print(templates)
-
-
-
-
 ########################### 测试中用到的接口 ######################################
 
 def test_get_templates(filepaths, encoding='utf8'):
@@ -64,6 +56,9 @@ def test_get_templates(filepaths, encoding='utf8'):
     return templates
 
 
-
-
 #################################################################################
+
+
+if __name__ == '__main__':
+    templates = get_templates(['../DATASET/dataset1/template.utf8', '../DATASET/dataset2/template.utf8'])
+    print(templates)
