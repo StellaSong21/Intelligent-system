@@ -63,5 +63,5 @@ class Solution:
         word_to_ix, _ = dutil.BiLSTM_stat(['./DATASET/dataset1/train.utf8', './DATASET/dataset2/train.utf8'])
         results = []
         for sent in sentences:
-            results.append(''.join(BiLSTM_CRF.viterbi(word_to_ix, './BiLSTM_CRF/final/e50h32/10.pt', sent)))
+            results.append(''.join(BiLSTM_CRF.viterbi(word_to_ix, './BiLSTM_CRF/final/e50h32/16.pt', sent)))
         return results
