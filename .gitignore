@@ -4,3 +4,4 @@ venv/
 DATASET/
 record/
 .vscode/
+wordseg/
